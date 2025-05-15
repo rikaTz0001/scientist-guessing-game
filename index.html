@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מי המדען? - אתגר הניחושים המדעי</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f8ff;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            direction: rtl;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 100, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .game-area {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            background-color: #e8f4f8;
+            text-align: right;
+        }
+        .hint {
+            font-size: 1.2em;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+        }
+        .hint.active {
+            opacity: 1;
+            max-height: 200px;
+            margin: 15px 0;
+        }
+        .hint-number {
+            font-weight: bold;
+            color: #3498db;
+            margin-left: 10px;
+        }
+        .hint-content {
+            display: inline;
+        }
+        .controls {
+            margin: 20px 0;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .answer-section {
+            margin-top: 20px;
+        }
+        input {
+            padding: 10px;
+            font-size: 1em;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            width: 250px;
+            margin-left: 10px;
+            text-align: right;
+        }
+        .result {
+            margin-top: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            min-height: 30px;
+        }
+        .correct {
+            color: #27ae60;
+        }
+        .incorrect {
+            color: #e74c3c;
+        }
+        .score {
+            font-size: 1.1em;
+            margin: 20px 0;
+        }
+        .scientist-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            margin: 10px auto;
+            display: none;
+        }
+        .difficulty-selector {
+            margin: 20px 0;
+        }
+        .timer {
+            font-size: 1.2em;
+            margin: 10px 0;
+            color: #e74c3c;
+        }
+        .message {
+            margin: 15px 0;
+            font-size: 1.1em;
+            min-height: 25px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 מי המדען? - אתגר הניחושים המדעי!</h1>
+        
+        <div class="difficulty-selector">
+            <label for="difficulty">בחר רמת קושי:</label>
+            <select id="difficulty">
+                <option value="easy">קל - מדענים מפורסמים</option>
+                <option value="medium">בינוני - מדענים מוכרים</option>
+                <option value="hard">קשה - מדענים פחות מוכרים</option>
+            </select>
+        </div>
+
+        <div class="timer">זמן: <span id="time-left">30</span> שניות</div>
+        
+        <div class="game-area">
+            <div class="hint" id="hint1">
+                <span class="hint-number">רמז 1:</span>
+                <span class="hint-content" id="hint1-content"></span>
+            </div>
+            <div class="hint" id="hint2">
+                <span class="hint-number">רמז 2:</span>
+                <span class="hint-content" id="hint2-content"></span>
+            </div>
+            <div class="hint" id="hint3">
+                <span class="hint-number">רמז 3:</span>
+                <span class="hint-content" id="hint3-content"></span>
+            </div>
+            <div class="hint" id="hint4">
+                <span class="hint-number">רמז 4:</span>
+                <div id="hint4-image-container">
+                    <img id="scientist-image" class="scientist-image" alt="תמונת המדען/ית" />
+                </div>
+            </div>
+            
+            <div class="message" id="message"></div>
+            
+            <div class="answer-section">
+                <input type="text" id="guess-input" placeholder="מי המדען/ית?" disabled>
+                <button id="submit-guess" disabled>נחש!</button>
+            </div>
+            
+            <div class="controls">
+                <button id="next-hint">הצג רמז</button>
+                <button id="reveal-answer" disabled>חשוף תשובה</button>
+                <button id="new-game" disabled>משחק חדש</button>
+            </div>
+            
+            <div class="result" id="result"></div>
+            <div class="score">ניקוד: <span id="score">0</span></div>
+        </div>
+    </div>
+
+    <script>
+        // רשימת מדענים לפי רמת קושי
+        const scientists = {
+            easy: [
+                {
+                    name: "אלברט איינשטיין",
+                    hints: [
+                        "מדען יהודי-גרמני שחי במאה ה-20 והתמחה בפיזיקה תיאורטית.",
+                        "פיתח את תורת היחסות הפרטית והכללית וזכה בפרס נובל על הסבר האפקט הפוטואלקטרי.",
+                        "היה ידוע בשיערו הפרוע, אהבתו לכינור והציטוט המפורסם: 'אלוהים לא משחק בקוביות עם היקום'.",
+                        "/api/placeholder/180/250"
+                    ],
+                    acceptableAnswers: ["אלברט איינשטיין", "איינשטיין"]
+                },
+                {
+                    name: "מארי קירי",
+                    hints: [
+                        "מדענית פולנייה-צרפתייה שחיה בסוף המאה ה-19 ותחילת המאה ה-20 והתמחתה בפיזיקה וכימיה.",
+                        "גילתה את היסודות רדיום ופולוניום וערכה מחקר פורץ דרך בתחום הרדיואקטיביות.",
+                        "הייתה האישה הראשונה שזכתה בפרס נובל והאדם היחיד שזכה בפרס נובל בשני תחומים מדעיים שונים.",
+                        "/api/placeholder/180/250"
+                    ],
+                    acceptableAnswers: ["מארי קירי", "מארי סקלודובסקה קירי", "קירי"]
+                },
+                {
+                    name: "יצחק ניוטון",
+                    hints: [
+                        "מדען ומתמטיקאי אנגלי מהמאה ה-17 שנחשב לאחד האבות המייסדים של הפיזיקה המודרנית.",
+                        "גילה את חוקי התנועה וחוק הכבידה העולמי, והמציא את חשבון האינפיניטסימלי.",
+                        "לפי האגדה, הוא קיבל השראה לתיאוריית הכבידה כאשר צפה בתפוח נופל מעץ.",
+                        "/api/placeholder/180/250"
+                    ],
+                    acceptableAnswers: ["יצחק ניוטון", "אייזק ניוטון", "סר יצחק ניוטון", "ניוטון"]
+                },
+                {
+                    name: "אדה לאבלייס",
+                    hints: [
+                        "מתמטיקאית בריטית מהמאה ה-19, שנחשבת למתכנתת המחשב הראשונה בעולם.",
+                        "פיתחה את האלגוריתם הראשון שנועד להרצה על מחשב מכני - 'המנוע האנליטי' של צ'ארלס בבג'.",
+                        "הייתה בתו של המשורר המפורסם לורד ביירון, אך מעולם לא פגשה את אביה.",
+                        "/api/placeholder/180/250"
+                    ],
+                    acceptableAnswers: ["אדה לאבלייס", "אוגוסטה אדה קינג", "הרוזנת מלאבלייס", "לאבלייס"]
+                }
+            ],
+            medium: [
+                {
+                    name: "ניקולה טסלה",
+                    hints: [
+                        "מדען סרבי-אמריקאי שחי בסוף המאה ה-19 ותחילת המאה ה-20 והתמחה בהנדסת חשמל.",
+                        "פיתח את שיטת החשמל בזרם חילופין (AC) והיה מפתח מרכזי בתחום האלקטרומגנטיות.",
+                        "היה ידוע ביכולתו לזכור ספרים שלמים וראייתו המיוחדת שאפשרה לו 'לראות' המצאות בראשו בפרטי פרטים.",
+                        "/api/placeholder/180/250"
+                    ],
+                    acceptableAnswers: ["ניקולה טסלה", "טסלה"]
+                },
+                {
+                    name: "רוזלינד פרנקלין",
+                    hints: [
+                        "מדענית בריטית שחיה במאה ה-20 והתמחתה בכימיה פיזיקלית וקריסטלוגרפיה.",
+                        "צילומי הדיפרקציה מקרני X שלה היו קריטיים בפענוח המבנה המולקולרי של ה-DNA.",
+                        "לא זכתה בהכרה המתאימה בחייה, ועבודתה שימשה את ווטסון וקריק ללא ידיעתה.",
+                        "/api/placeholder/180/250"
+                    ],
+                    acceptableAnswers: ["רוזלינד פרנקלין", "פרנקלין"]
+                },
+                {
+                    name: "אלן טיורינג",
+                    hints: [
+                        "מדען בריטי מהמאה ה-20 שנחשב לאבי מדעי המחשב ואינטליגנציה מלאכותית.",
+                        "פיצח את הצופן הגרמני אניגמה במהלך מלחמת העולם השנייה ופיתח את 'מבחן טיורינג'.",
+                        "נרדף בשל היותו הומוסקסואל ונאלץ לעבור טיפולי הורמונים, דבר שהוביל להתאבדותו בגיל 41.",
+                        "/api/placeholder/180/250"
+                    ],
+                    acceptableAnswers: ["אלן טיורינג", "טיורינג"]
+                },
+                {
+                    name: "ריצ'רד פיינמן",
+                    hints: [
+                        "פיזיקאי אמריקאי שחי במאה ה-20 והיה מומחה בתחום תורת הקוונטים.",
+                        "זכה בפרס נובל לפיזיקה על תרומתו לפיתוח 'אלקטרודינמיקה קוונטית' והיה חבר בצוות פרויקט מנהטן.",
+                        "היה ידוע בחוש ההומור שלו, יכולת ההוראה המעולה ובתחביבו כמפצח קודים וכפורץ כספות.",
+                        "/api/placeholder/180/250"
+                    ],
+                    acceptableAnswers: ["ריצ'רד פיינמן", "פיינמן"]
+                }
+            ],
+            hard: [
+                {
+                    name: "ליז מייטנר",
+                    hints: [
+                        "פיזיקאית אוסטרית-שבדית יהודייה שחיה במאה ה-20 והתמחתה בפיזיקה גרעינית.",
+                        "הייתה חלק מהצוות שגילה את תהליך הביקוע הגרעיני, אך לא זכתה בפרס נובל על עבודתה.",
+                        "נאלצה לברוח מגרמניה הנאצית ב-1938 והמשיכה את מחקרה בשבדיה. היסוד מייטנריום נקרא על שמה.",
+                        "/api/placeholder/180/250"
+                    ],
+                    acceptableAnswers: ["ליז מייטנר", "ליזה מייטנר", "מייטנר"]
+                },
+                {
+                    name: "ג'יימס קלרק מקסוול",
+                    hints: [
+                        "פיזיקאי ומתמטיקאי סקוטי מהמאה ה-19 שעסק בתחום האלקטרומגנטיות.",
+                        "פיתח את משוואות מקסוול המתארות את היחסים בין חשמל, מגנטיות ואור.",
+                        "היה גם צלם חלוצי וצילם את התצלום הצבעוני הקבוע הראשון בהיסטוריה.",
+                        "/api/placeholder/180/250"
+                    ],
+                    acceptableAnswers: ["ג'יימס קלרק מקסוול", "ג'יימס מקסוול", "מקסוול"]
+                },
+                {
+                    name: "סטיבן הוקינג",
+                    hints: [
+                        "פיזיקאי תיאורטי בריטי שחי במאה ה-20 וה-21 והתמחה בקוסמולוגיה ופיזיקה קוונטית.",
+                        "חקר את החורים השחורים והציע את 'קרינת הוקינג', והיה מחבר הספר 'קיצור תולדות הזמן'.",
+                        "חי עם מחלת ALS במשך למעלה מ-50 שנה ותקשר באמצעות מחשב מיוחד עם סינתיסייזר קול.",
+                        "/api/placeholder/180/250"
+                    ],
+                    acceptableAnswers: ["סטיבן הוקינג", "הוקינג"]
+                },
+                {
+                    name: "ברברה מקלינטוק",
+                    hints: [
+                        "ציטוגנטיקאית אמריקאית שחיה במאה ה-20 והתמחתה במחקר תירס ומבנה הכרומוזומים.",
+                        "גילתה את האלמנטים הגנטיים הניידים ('גנים קופצים') והייתה חלוצה בהבנת הרגולציה הגנטית.",
+                        "זכתה בפרס נובל לפיזיולוגיה ורפואה רק בגיל 81, שנים רבות לאחר התגליות המשמעותיות שלה.",
+                        "/api/placeholder/180/250"
+                    ],
+                    acceptableAnswers: ["ברברה מקלינטוק", "מקלינטוק"]
+                }
+            ]
+        };
+
+        // משתנים גלובליים
+        let currentScientist;
+        let revealedHints = 0;
+        let score = 0;
+        let timer;
+        let timeLeft = 30;
+        let gameActive = false;
+        let currentDifficulty = "easy";
+
+        // בחירת אלמנטים מה-DOM
+        const difficultySelector = document.getElementById('difficulty');
+        const hintElements = [
+            document.getElementById('hint1'),
+            document.getElementById('hint2'),
+            document.getElementById('hint3'),
+            document.getElementById('hint4')
+        ];
+        const hintContents = [
+            document.getElementById('hint1-content'),
+            document.getElementById('hint2-content'),
+            document.getElementById('hint3-content')
+        ];
+        const scientistImage = document.getElementById('scientist-image');
+        const guessInput = document.getElementById('guess-input');
+        const submitGuessButton = document.getElementById('submit-guess');
+        const nextHintButton = document.getElementById('next-hint');
+        const revealAnswerButton = document.getElementById('reveal-answer');
+        const newGameButton = document.getElementById('new-game');
+        const resultElement = document.getElementById('result');
+        const scoreElement = document.getElementById('score');
+        const messageElement = document.getElementById('message');
+        const timeLeftElement = document.getElementById('time-left');
+
+        // מאזין אירועים
+        difficultySelector.addEventListener('change', () => {
+            currentDifficulty = difficultySelector.value;
+            if (gameActive) {
+                startNewGame();
+            }
+        });
+
+        nextHintButton.addEventListener('click', revealNextHint);
+        submitGuessButton.addEventListener('click', checkGuess);
+        revealAnswerButton.addEventListener('click', revealAnswer);
+        newGameButton.addEventListener('click', startNewGame);
+        guessInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                checkGuess();
+            }
+        });
+
+        // פונקציות
+        function startNewGame() {
+            // איפוס המשחק
+            clearInterval(timer);
+            timeLeft = 30;
+            timeLeftElement.textContent = timeLeft;
+            revealedHints = 0;
+            resultElement.textContent = '';
+            resultElement.className = 'result';
+            messageElement.textContent = '';
+            guessInput.value = '';
+
+            // הסתרת כל הרמזים
+            hintElements.forEach(hint => {
+                hint.classList.remove('active');
+            });
+            scientistImage.style.display = 'none';
+
+            // בחירת מדען אקראי מהקושי הנוכחי
+            const scientistsForDifficulty = scientists[currentDifficulty];
+            currentScientist = scientistsForDifficulty[Math.floor(Math.random() * scientistsForDifficulty.length)];
+
+            // עדכון מצב המשחק
+            gameActive = true;
+            guessInput.disabled = true;
+            submitGuessButton.disabled = true;
+            revealAnswerButton.disabled = false;
+            nextHintButton.disabled = false;
+            newGameButton.disabled = true;
+
+            // הנחיה למשתמש
+            messageElement.textContent = 'לחץ על "הצג רמז" כדי להתחיל!';
+        }
+
+        function revealNextHint() {
+            if (revealedHints < 4) {
+                hintElements[revealedHints].classList.add('active');
+                
+                if (revealedHints < 3) {
+                    hintContents[revealedHints].textContent = currentScientist.hints[revealedHints];
+                } else {
+                    scientistImage.src = currentScientist.hints[3];
+                    scientistImage.style.display = 'block';
+                }
+                
+                revealedHints++;
+                
+                // הפעלת הטיימר אם זה הרמז הראשון
+                if (revealedHints === 1) {
+                    startTimer();
+                    guessInput.disabled = false;
+                    submitGuessButton.disabled = false;
+                }
+                
+                // בדיקה אם הגענו לסוף הרמזים
+                if (revealedHints === 4) {
+                    nextHintButton.disabled = true;
+                }
+            }
+        }
+
+        function startTimer() {
+            clearInterval(timer);
+            timeLeft = 30;
+            timeLeftElement.textContent = timeLeft;
+            
+            timer = setInterval(() => {
+                timeLeft--;
+                timeLeftElement.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    timeLeftElement.textContent = '0';
+                    messageElement.textContent = 'נגמר הזמן!';
+                    guessInput.disabled = true;
+                    submitGuessButton.disabled = true;
+                    revealAnswerButton.disabled = false;
+                    nextHintButton.disabled = true;
+                }
+            }, 1000);
+        }
+
+        function checkGuess() {
+            const guess = guessInput.value.trim();
+            
+            if (guess === '') {
+                messageElement.textContent = 'אנא הכנס ניחוש!';
+                return;
+            }
+            
+            // בדיקה אם הניחוש נכון
+            const isCorrect = currentScientist.acceptableAnswers.some(answer => 
+                answer.localeCompare(guess, 'he', { sensitivity: 'base' }) === 0);
+            
+            if (isCorrect) {
+                clearInterval(timer);
+                resultElement.textContent = 'כל הכבוד! צדקת!';
+                resultElement.className = 'result correct';
+                
+                // חישוב נקודות לפי מספר הרמזים שנחשפו
+                const pointsEarned = 5 - revealedHints + 1; // 4 נקודות לרמז אחד, 1 נקודה ל-4 רמזים
+                score += pointsEarned;
+                scoreElement.textContent = score;
+                
+                messageElement.textContent = `קיבלת ${pointsEarned} נקודות!`;
+                
+                endGame();
+            } else {
+                resultElement.textContent = 'לא נכון, נסה שוב או בקש רמז נוסף.';
+                resultElement.className = 'result incorrect';
+            }
+        }
+
+        function revealAnswer() {
+            clearInterval(timer);
+            resultElement.textContent = `התשובה הנכונה היא: ${currentScientist.name}`;
+            resultElement.className = 'result';
+            
+            // חשיפת כל הרמזים
+            for (let i = revealedHints; i < 4; i++) {
+                hintElements[i].classList.add('active');
+                
+                if (i < 3) {
+                    hintContents[i].textContent = currentScientist.hints[i];
+                } else {
+                    scientistImage.src = currentScientist.hints[3];
+                    scientistImage.style.display = 'block';
+                }
+            }
+            
+            endGame();
+        }
+
+        function endGame() {
+            gameActive = false;
+            guessInput.disabled = true;
+            submitGuessButton.disabled = true;
+            nextHintButton.disabled = true;
+            revealAnswerButton.disabled = true;
+            newGameButton.disabled = false;
+            messageElement.textContent = 'רוצה לשחק שוב? לחץ על "משחק חדש"!';
+        }
+
+        // התחלת המשחק הראשון
+        startNewGame();
+    </script>
+</body>
+</html>
+   
